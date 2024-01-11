@@ -37,21 +37,28 @@ public class Robot extends TimedRobot {
 
     SmartDashboard.putNumber("Power", launcher.getPower());
 
-    if(operator.getRightBumper()){
+    if(operator.getRightBumperPressed()){
       launcher.increasePower();
+      launcher.out();
     }
 
-     if(operator.getLeftBumper()){
+     if(operator.getLeftBumperPressed()){
       launcher.decreasePower();
+      launcher.out();
     }
 
-    if (operator.getRightTriggerAxis() > .1){
-        launcher.launch();
+    if(operator.getAButton()) {
+      launcher.setPower(0);
+      launcher.out();
     }
 
-    if (operator.getLeftTriggerAxis() > .1){
-        launcher.out();
-    }
+    // if (operator.getRightTriggerAxis() > .1){
+    //     launcher.launch();
+    // }
+
+    // if (operator.getLeftTriggerAxis() > .1){
+    //     launcher.out();
+    // }
   }
 
   @Override
