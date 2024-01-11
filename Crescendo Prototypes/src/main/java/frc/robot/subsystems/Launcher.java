@@ -17,8 +17,7 @@ public class Launcher extends SubsystemBase {
   private CANSparkMax leftMotor;
   private CANSparkMax rightMotor;
 
-
-  private double power = .25;
+  private double power = .8;
 
   public Launcher() {
     leftMotor = new CANSparkMax(Ports.LeftMotor, MotorType.kBrushless);
@@ -38,29 +37,34 @@ public class Launcher extends SubsystemBase {
   public void periodic() {
   }
 
-  public void launch(){
+  public void launch() {
+    leftMotor.set(-power);
+    rightMotor.set(-power);
+  }
+
+  public void out() {
     leftMotor.set(power);
     rightMotor.set(power);
   }
 
-  public void out(){
+  public void angle(){
     leftMotor.set(power);
-    rightMotor.set(power);
+    rightMotor.set(power/1.2);
   }
 
-  public void increasePower(){
+  public void increasePower() {
     power += .05;
-    if(power > 1)
+    if (power > 1)
       power = 1;
   }
 
-    public void decreasePower(){
-      power -= .05;
-      if(power < 0)
-        power = 0;
-    }
+  public void decreasePower() {
+    power -= .05;
+    if (power < 0)
+      power = 0;
+  }
 
-  public double getPower(){
+  public double getPower() {
     return power;
   }
 
@@ -68,8 +72,8 @@ public class Launcher extends SubsystemBase {
     this.power = power;
   }
 
-  public static Launcher getInstance(){
-    if (instance == null){
+  public static Launcher getInstance() {
+    if (instance == null) {
       instance = new Launcher();
     }
 

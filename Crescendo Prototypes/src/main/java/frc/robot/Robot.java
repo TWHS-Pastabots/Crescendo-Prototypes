@@ -21,61 +21,87 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+  }
 
   @Override
-  public void autonomousInit() {}
+  public void autonomousInit() {
+  }
 
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+  }
 
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+  }
 
   @Override
   public void teleopPeriodic() {
 
     SmartDashboard.putNumber("Power", launcher.getPower());
 
-    if(operator.getRightBumperPressed()){
+    if (operator.getRightBumperPressed()) {
       launcher.increasePower();
-      launcher.out();
+      launcher.launch();
     }
 
-     if(operator.getLeftBumperPressed()){
+    if (operator.getLeftBumperPressed()) {
+      launcher.decreasePower();
+      launcher.launch();
+    }
+
+    if(operator.getBButtonPressed()){
+      launcher.increasePower();
+      launcher.out();
+
+    }
+
+    if(operator.getYButtonPressed()){
+      launcher.increasePower();
+      launcher.angle();
+    }
+
+    if(operator.getXButtonPressed()){
       launcher.decreasePower();
       launcher.out();
     }
 
-    if(operator.getAButton()) {
+    if (operator.getAButton()) {
       launcher.setPower(0);
       launcher.out();
     }
 
     // if (operator.getRightTriggerAxis() > .1){
-    //     launcher.launch();
+    // launcher.launch();
     // }
 
     // if (operator.getLeftTriggerAxis() > .1){
-    //     launcher.out();
+    // launcher.out();
     // }
   }
 
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+  }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
   @Override
-  public void testInit() {}
+  public void testInit() {
+  }
 
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
+  }
 
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+  }
 
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+  }
 }
