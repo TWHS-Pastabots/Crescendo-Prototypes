@@ -7,21 +7,28 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 import frc.robot.subsystems.Launcher;
+import frc.robot.subsystems.Intake;
 
 public class Robot extends TimedRobot {
 
-  private XboxController operator = new XboxController(0);
+ 
+  private XboxController intakController = new XboxController(1);
 
-  private Launcher launcher;
+  // private Launcher launcher;
+  private Intake intake;
 
   @Override
   public void robotInit() {
-    launcher = Launcher.getInstance();
+
+    intake = Intake.getInstance();
   }
 
   @Override
   public void robotPeriodic() {
+
+    SmartDashboard.putNumber("Intake Current", intake.getCurrent());
   }
 
   @Override
@@ -39,38 +46,70 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
 
-    SmartDashboard.putNumber("Power", launcher.getPower());
+    intake.periodic();
 
-    if (operator.getRightBumperPressed()) {
-      launcher.increasePower();
-      launcher.launch();
+    // SmartDashboard.putNumber("Launcher Power", launcher.getPower());
+    SmartDashboard.putNumber("Intake Power", intake.getPower());
+    SmartDashboard.putNumber("Intake Graph", intake.getPower());
+
+
+
+    // *INTAKE CONTROLS* //
+    if(intakController.getRightBumperPressed()){
+      intake.intake();
     }
 
-    if (operator.getLeftBumperPressed()) {
-      launcher.decreasePower();
-      launcher.launch();
+    if(intakController.getLeftBumperPressed()){
+      intake.decreasePower();
+      intake.intake();
     }
 
-    if(operator.getBButtonPressed()){
-      launcher.increasePower();
-      launcher.out();
+    if(intakController.getBButtonPressed()){
+      intake.increasePower();
+      intake.outtake();
 
     }
 
-    if(operator.getYButtonPressed()){
-      launcher.increasePower();
-      launcher.angle();
+    if(intakController.getXButtonPressed()){
+      intake.decreasePower();
+      intake.outtake();
+      
     }
 
-    if(operator.getXButtonPressed()){
-      launcher.decreasePower();
-      launcher.out();
+    if (intakController.getAButton()) {
+      intake.turnOff();
     }
 
-    if (operator.getAButton()) {
-      launcher.setPower(0);
-      launcher.out();
-    }
+    //* LAUNCHER CONTROLS */
+    // if (launcherController.getRightBumperPressed()) {
+    //   launcher.increasePower();
+    //   launcher.launch();
+    // }
+
+    // if (launcherController.getLeftBumperPressed()) {
+    //   launcher.decreasePower();
+    //   launcher.launch();
+    // }
+
+    // if(launcherController.getBButtonPressed()){
+    //   launcher.increasePower();
+    //   launcher.out();
+    // }
+
+    // if(launcherController.getYButtonPressed()){
+    //   launcher.increasePower();
+    //   launcher.angle();
+    // }
+
+    // if(launcherController.getXButtonPressed()){
+    //   launcher.decreasePower();
+    //   launcher.out();
+    // }
+
+    // if (launcherController.getAButton()) {
+    //   launcher.setPower(0);
+    //   launcher.out();
+    // }
 
     // if (operator.getRightTriggerAxis() > .1){
     // launcher.launch();

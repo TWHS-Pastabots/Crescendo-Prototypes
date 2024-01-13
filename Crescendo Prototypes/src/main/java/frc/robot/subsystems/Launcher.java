@@ -20,8 +20,8 @@ public class Launcher extends SubsystemBase {
   private double power = .8;
 
   public Launcher() {
-    leftMotor = new CANSparkMax(Ports.LeftMotor, MotorType.kBrushless);
-    rightMotor = new CANSparkMax(Ports.RightMotor, MotorType.kBrushless);
+    leftMotor = new CANSparkMax(Ports.Motor1, MotorType.kBrushless);
+    rightMotor = new CANSparkMax(Ports.Motor2, MotorType.kBrushless);
 
     leftMotor.setSmartCurrentLimit(25);
     leftMotor.setInverted(true);
