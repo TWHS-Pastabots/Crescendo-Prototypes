@@ -9,7 +9,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.commands.Handoff;
+import frc.robot.commands.BreakBeamHandoff;
+import frc.robot.commands.ShootCommand;
 import frc.robot.subsystems.climber.Climber;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.launcher.Launcher;
@@ -49,7 +50,8 @@ public class Robot extends TimedRobot {
 
   private Command m_autoSelected;
 
-  private Handoff handoff;
+  private BreakBeamHandoff handoff;
+  private ShootCommand shootCommand;
 
   private SendableChooser<Command> m_chooser;
 
@@ -58,7 +60,7 @@ public class Robot extends TimedRobot {
     drivebase = Drivebase.getInstance();
     launcher = Launcher.getInstance();
     intake = Intake.getInstance();
-    climber = Climber.getInstance();
+    // climber = Climber.getInstance();
 
     driver = new XboxController(0);
     operator = new XboxController(1);
@@ -68,6 +70,8 @@ public class Robot extends TimedRobot {
 
     SmartDashboard.putData("Auto choices", m_chooser);
 
+    shootCommand = new ShootCommand();
+    handoff = new BreakBeamHandoff();
   
     // CameraServer.startAutomaticCapture(0);
   }
@@ -77,13 +81,13 @@ public class Robot extends TimedRobot {
     CommandScheduler.getInstance().run();
     drivebase.periodic();
 
-    launcher.launcherConnections();
-    intake.intakeConnections();
-    climber.climberConnections();
+    // launcher.launcherConnections();
+    // intake.intakeConnections();
+    // climber.climberConnections();
 
-    launcher.printConnections();
-    intake.printConnections();
-    climber.printConnections();
+    // launcher.printConnections();
+    // intake.printConnections();
+    // climber.printConnections();
 
     SmartDashboard.putNumber("Flipper Current", intake.getFlipperCurrent());
     SmartDashboard.putNumber("Pivot Current", launcher.getPivotCurrent());
@@ -97,9 +101,11 @@ public class Robot extends TimedRobot {
     SmartDashboard.putString("Intake State", intake.getIntakeState());
     SmartDashboard.putString("Launcher State", launcher.getLaunchState().toString());
     SmartDashboard.putBoolean("Done? ", handoff.isFinished());
+    SmartDashboard.putBoolean("BreakBeam", launcher.getBreakBeam());
 
     SmartDashboard.putNumber("X-Coordinate", drivebase.getPose().getX());
     SmartDashboard.putNumber("Y-Coordinate", drivebase.getPose().getY());
+    SmartDashboard.putNumber("Op Right Stick", -operator.getRightY());
 
   }
 
@@ -107,7 +113,7 @@ public class Robot extends TimedRobot {
   public void autonomousInit() {
     m_autoSelected = m_chooser.getSelected();
 
-    drivebase.resetPose(PathPlannerAuto.getStaringPoseFromAutoFile(m_chooser.getSelected().getName()));
+    // drivebase.resetPose(PathPlannerAuto.getStaringPoseFromAutoFile(m_chooser.getSelected().getName()));
 
     if (m_autoSelected != null) {
       m_autoSelected.schedule();
@@ -117,7 +123,7 @@ public class Robot extends TimedRobot {
   @Override
   public void autonomousPeriodic() {
     intake.periodic();
-    launcher.periodic();
+    launcher.updatePose();
   }
 
   @Override
@@ -129,8 +135,8 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    // intake.periodic();
-    // launcher.periodic();
+    intake.periodic();
+    launcher.updatePose();
 
     boolean fieldRelative = true;
 
@@ -155,37 +161,38 @@ public class Robot extends TimedRobot {
     //   handoff.schedule();
     // }
 
-    if(operator.getXButton()){
-    intake.setFlipperPower();
-    } else if(operator.getYButton()){
-    intake.setReverseFlipperPower();
-    } else {
-    intake.setFlipperOff();
-    }
+    // if(operator.getXButton()){
+    // intake.setFlipperPower();
+    // } else if(operator.getYButton()){
+    // intake.setReverseFlipperPower();
+    // } else {
+    // intake.setFlipperOff();
+    // }
 
     // *CLIMBER CONTROLS */
 
-    if (driver.getRightBumper()) {
-      climber.setClimbingPower();
-    } else if (driver.getLeftBumper()) {
-      climber.setReverseClimberPower();
-    } else {
-      climber.setClimberOff();
-    }
+    // if (driver.getRightBumper()) {
+    //   climber.setClimbingPower();
+    // } else if (driver.getLeftBumper()) {
+    //   climber.setReverseClimberPower();
+    // } else {
+    //   climber.setClimberOff();
+    // }
 
     /* LAUNCHER CONTROLS */
 
-    if (-operator.getRightY() > 0) {
-    launcher.setPivotPower();
-    } else if (-operator.getRightY() < 0) {
-    launcher.setReversePivotPower();
-    } else {
-    launcher.setPivotOff();
-    }
+    // if (operator.getRightY() > 0.1) {
+    // launcher.setPivotPower();
+    // } else if (operator.getRightY() < -0.1) {
+    // launcher.setReversePivotPower();
+    // } else {
+    // launcher.setPivotOff();
+    // }
 
     if (operator.getRightTriggerAxis() > 0) {
       launcher.setLauncherOn();
-      launcher.setFlickOff();
+    }else if(operator.getRightBumper()){
+      launcher.setFlickerOn();
     } else if (operator.getLeftTriggerAxis() > 0) {
       launcher.setReverseLauncherOn();
       launcher.setFlickerReverse();
@@ -194,11 +201,18 @@ public class Robot extends TimedRobot {
       launcher.setFlickOff();
     }
 
-    if (operator.getAButton()) {
-      launcher.setPivotState(LauncherState.HANDOFF);
-    } else if (operator.getBButton()) {
-      launcher.setPivotState(LauncherState.SPEAKER);
+    if(operator.getAButton()){
+      intake.setRollerPower();
     }
+    else{
+      intake.setRollerOff();
+    }
+
+    // if (operator.getAButton()) {
+    //   launcher.setPivotState(LauncherState.HANDOFF);
+    // } else if (operator.getBButton()) {
+    //   launcher.setPivotState(LauncherState.SPEAKER);
+    // }
   }
 
   @Override

@@ -3,20 +3,18 @@ package frc.robot.commands;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.launcher.Launcher;
-import frc.robot.subsystems.launcher.Launcher.LauncherState;
 
-public class AutoShoot extends Command {
+public class ShootCommand extends Command {
 
   private Launcher launcher;
 
   private boolean ended;
 
   private double startTime;
-  // these are somewhat random numbers so change however you like
   private double windup = .25;
-  private double duration = .75;
+  private double duration = windup +.5;
 
-  public AutoShoot() {
+  public ShootCommand() {
     launcher = Launcher.getInstance();
   }
 
@@ -24,13 +22,15 @@ public class AutoShoot extends Command {
   public void initialize() {
     ended = false;
 
-    launcher.setPivotState(LauncherState.SPEAKER);
+    launcher.updatePose();
     startTime = Timer.getFPGATimestamp();
     launcher.setLauncherOn();
+
   }
 
   @Override
   public void execute() {
+
       double elapsedTime = Timer.getFPGATimestamp() - startTime;
 
       if (elapsedTime > windup) {

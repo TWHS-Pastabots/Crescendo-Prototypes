@@ -19,17 +19,17 @@ public class Ports {
     //**/
 
     // launcher sparkmaxes
-    public static final int shootMotor1 = 0;
-    public static final int shootMotor2 = 0;
-    public static final int flicker = 0;
-    public static final int pivotMotor1 = 0;
-    public static final int pivotMotor2 = 0;
+    public static final int shootMotor1 = 14;
+    public static final int shootMotor2 = 11;
+    public static final int flicker = 12;
+    public static final int pivotMotor1 = 13;
+    public static final int pivotMotor2 = 15;
 
     // climber sparkmaxes
-    public static final int climber1 = 0;
-    public static final int climber2 = 0;
+    public static final int climber1 = 17;
+    public static final int climber2 = 9;
 
     // intake sparkmaxes
-    public static final int roller = 0;
-    public static final int flipper = 0;
+    public static final int roller = 10;
+    public static final int flipper = 16;
 }

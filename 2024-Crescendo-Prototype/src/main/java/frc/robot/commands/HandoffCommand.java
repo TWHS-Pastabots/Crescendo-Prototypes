@@ -13,16 +13,16 @@ import frc.robot.subsystems.intake.Intake.IntakePosition;
 import frc.robot.subsystems.launcher.*;
 import frc.robot.subsystems.launcher.Launcher.LauncherState;
 
-public class Handoff extends Command {
+public class HandoffCommand extends Command {
 
   private Launcher launcher;
   private Intake intake;
 
-  private double threshold = 25.0;
+  private double threshold = 18.0;
 
   private double startTime = 0.0;
   private double timeElapsed = 0.0;
-  private double duration = 1.0;
+  private double duration = 1.15;
 
   private double startTime2 = 0.0;
   private double timeElapsed2 = 0.0;
@@ -32,18 +32,20 @@ public class Handoff extends Command {
   private boolean beganHandoff;
   private boolean ended;
 
-  public Handoff() {
+  public HandoffCommand() {
+    launcher = Launcher.getInstance();
+    intake = Intake.getInstance();
   }
 
   @Override
   public void initialize() {
-    launcher = Launcher.getInstance();
-    intake = Intake.getInstance();
-    startTime = Timer.getFPGATimestamp();
+
+    startTime = 0;
     startTime2 = 0;
 
     intake.setIntakeState(IntakePosition.GROUND);
     launcher.setPivotState(LauncherState.HANDOFF);
+    launcher.updatePose();
 
     beganIntaking = false;
     hasRing = false;
@@ -73,8 +75,8 @@ public class Handoff extends Command {
       launcher.setReverseLauncherOn();
       launcher.setFlickerReverse();
     }
-       SmartDashboard.putNumber("StartTime2", startTime2);
-       SmartDashboard.putNumber("timeElapsed2", timeElapsed2);
+    SmartDashboard.putNumber("StartTime2", startTime2);
+    SmartDashboard.putNumber("timeElapsed2", timeElapsed2);
     if (hasRing && intake.hasReachedPose(2.3)) {
       intake.setRollerPower();
 
@@ -85,16 +87,9 @@ public class Handoff extends Command {
 
       timeElapsed2 = Timer.getFPGATimestamp() - startTime2;
 
-      if (timeElapsed2 > .25) {
-        System.out.println("ANSHANSHANSHANSHANSHANSH");
-        launcher.setFlickOff();
-        launcher.setLauncherOff();
-        intake.setRollerOff();
+      if (timeElapsed2 > .5) {
         ended = true;
       }
-      // if(ended){
-      // end(true);
-      // }
     }
   }
 

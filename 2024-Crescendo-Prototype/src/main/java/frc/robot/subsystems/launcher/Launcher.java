@@ -7,6 +7,7 @@ import com.revrobotics.SparkMaxPIDController;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import com.revrobotics.CANSparkMax.IdleMode;
@@ -19,12 +20,12 @@ import frc.robot.Ports;
 public class Launcher {
 
     public enum LauncherState {
-        AMP(-65, 0.25),
-        STOP(-1.809524536132812, 0.0),
-        HOLD(-18.714231491088867, 0.0),
-        TRAP(-74.04991149902344, 0.6),
-        HANDOFF(14.92857551574707, 0.25),
-        SPEAKER(-67.0, 1.0);
+        AMP(0.0, 0.25),
+        STOP(0.0, 0.0),
+        HOLD(0.0, 0.0),
+        TRAP(0.0, 0.6),
+        HANDOFF(-1, 0.25),
+        SPEAKER(-21.0, 1.0);
 
         public double position;
         public double launchSpeed;
@@ -58,6 +59,8 @@ public class Launcher {
 
     private static RelativeEncoder encoder1;
     private static RelativeEncoder encoder2;
+
+    private static DigitalInput breakBeam;
 
     private boolean[] connections = new boolean[10];
 
@@ -95,6 +98,7 @@ public class Launcher {
         pivotMotor1.restoreFactoryDefaults();
 
         pivotMotor1.setSmartCurrentLimit(60);
+
         pivotMotor1.setIdleMode(IdleMode.kBrake);
         pivotMotor1.setInverted(true);
         pivotMotor1.setOpenLoopRampRate(1);
@@ -104,15 +108,14 @@ public class Launcher {
 
         pivotMotor2.setIdleMode(IdleMode.kBrake);
         pivotMotor2.setSmartCurrentLimit(60);
-        pivotMotor2.setInverted(false);
+        pivotMotor2.setInverted(true);
         pivotMotor2.setOpenLoopRampRate(1);
-        pivotMotor2.burnFlash();
 
-        feedForward = new ArmFeedforward(0.085, 0.037, 0.0, 0.0);
+        feedForward = new ArmFeedforward(0, 0.05, 0.0, 0.0);
         motionProfile = new TrapezoidProfile(new Constraints(veloSP, maxAccel));
-
+        //0.03
         // Prototype numbers
-        // upper: .045 lower: .0285 ks:.0085 kg:.037
+        // upper: .045 lower: .045 ks:.0085 kg:.037
 
         encoder1 = pivotMotor1.getEncoder();
         encoder2 = pivotMotor2.getEncoder();
@@ -137,18 +140,22 @@ public class Launcher {
         pivotMotor1.burnFlash();
         pivotMotor2.burnFlash();
 
+        breakBeam = new DigitalInput(0);
+
         intake = Intake.getInstance();
     }
 
-    public void periodic() {
+    public void updatePose() {
 
         setPoint = motionProfile.calculate(0.02, setPoint, goal);
 
-        pivotController1.setReference(launchState.position, CANSparkMax.ControlType.kPosition, 0,
-                feedForward.calculate(encoder1.getPosition(), 0));
+        pivotMotor1.set(feedForward.calculate(encoder1.getPosition(), veloSP));
+        pivotMotor2.set(feedForward.calculate(encoder2.getPosition(), veloSP));
+        // pivotController1.setReference(launchState.position, CANSparkMax.ControlType.kPosition, 0,
+        //         feedForward.calculate(encoder1.getPosition(), 0));
 
-          pivotController2.setReference(launchState.position, CANSparkMax.ControlType.kPosition, 0,
-                feedForward.calculate(encoder2.getPosition(), 0));
+        //   pivotController2.setReference(launchState.position, CANSparkMax.ControlType.kPosition, 0,
+        //         feedForward.calculate(encoder2.getPosition(), 0));
 
     }
 
@@ -173,13 +180,17 @@ public class Launcher {
     }
 
     public void setLauncherOn() {
-        shootMotor1.set(launchState.launchSpeed);
-        shootMotor2.set(launchState.launchSpeed);
+        // shootMotor1.set(launchState.launchSpeed);
+        // shootMotor2.set(launchState.launchSpeed);
+        shootMotor1.set(.5);
+        shootMotor2.set(.5);
     }
 
     public void setReverseLauncherOn() {
-        shootMotor1.set(-launchState.launchSpeed);
-        shootMotor2.set(-launchState.launchSpeed);
+        // shootMotor1.set(-launchState.launchSpeed);
+        // shootMotor2.set(-launchState.launchSpeed);
+        shootMotor1.set(-.25);
+        shootMotor2.set(-.25);
     }
 
     public void setLauncherOff() {
@@ -229,6 +240,10 @@ public class Launcher {
 
     public double getVelocityGoal() {
         return setPoint.velocity;
+    }
+
+    public boolean getBreakBeam(){
+        return !breakBeam.get();
     }
 
     public boolean[] launcherConnections() {

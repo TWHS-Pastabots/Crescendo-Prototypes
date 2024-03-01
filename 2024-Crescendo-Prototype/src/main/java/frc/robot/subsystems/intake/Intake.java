@@ -15,9 +15,9 @@ public class Intake {
 
     public enum IntakePosition {
         STOP(0.0),
-        GROUND(-9.00039100646973),
+        GROUND(-7.452394962310791),
         TRAP(0.0),
-        HANDOFF(-0.999995708465576);
+        HANDOFF(-3);
 
         public double position;
 
@@ -82,7 +82,7 @@ public class Intake {
     }
 
     public void periodic() {
-        flipperController.setReference(intakePosition.position,
+        flipperController.setReference(IntakePosition.HANDOFF.position,
         CANSparkMax.ControlType.kPosition, 0,
         feedforward.calculate(encoder.getPosition(), veloSP));
     }
