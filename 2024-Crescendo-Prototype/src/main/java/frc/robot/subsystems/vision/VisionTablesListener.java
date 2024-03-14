@@ -1,5 +1,9 @@
 package frc.robot.subsystems.vision;
 
+import java.util.ArrayList;
+
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.networktables.DoubleArraySubscriber;
 import edu.wpi.first.networktables.IntegerArraySubscriber;
 import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
@@ -17,16 +21,35 @@ public class VisionTablesListener {
     private IntegerArraySubscriber yCoordsSub;
     private IntegerArraySubscriber zRotsSub;
     private IntegerSubscriber bestIDSub;
+    private IntegerSubscriber bestXSub;
+    private IntegerSubscriber bestYSub;
+    private IntegerSubscriber bestZSub;
     private IntegerArraySubscriber ringCenterXSub;
     private IntegerArraySubscriber ringCenterYSub;
-    private StringSubscriber cam1StreamSub;
+    private IntegerArraySubscriber hommographyR1Sub;
+    private IntegerArraySubscriber hommographyR2Sub;
+    private IntegerArraySubscriber hommographyR3Sub;
+    private IntegerSubscriber hammingSub;
+    private IntegerSubscriber timeStampSub;
+
     private double yPose = 0;
     private double xPose = 0;
     private double zRot = 0;
     private double ringX = -1;
     private double ringY = -1;
-    private double bestTagID = -1;
+    private int bestTagID = -1;
+    private double bestTagX = -1;
+    private double bestTagY = -1;
+    private double bestTagZ = -1;
+    private double hamming = -1;
+
     private String cam1Stream = null;
+
+    private boolean tagVisible;
+
+    private double timeStamp;
+
+    private double[] homography;
     // private IntegerArraySubscriber xEulerSub;
     // private IntegerArraySubscriber yEulerSub;
     // private IntegerArraySubscriber zEulerSub;
@@ -40,78 +63,100 @@ public class VisionTablesListener {
         zRotsSub = visionTable.getIntegerArrayTopic("Z Euler Angles").subscribe(new long[] {});
         ringCenterXSub = visionTable.getIntegerArrayTopic("Ring Center X Coords").subscribe(new long[] {});
         ringCenterYSub = visionTable.getIntegerArrayTopic("Ring Center Y Coords").subscribe(new long[] {});
-        cam1StreamSub = visionTable.getStringTopic("Cam1 Stream").subscribe(new String());
         bestIDSub = visionTable.getIntegerTopic("Best Tag ID").subscribe(-1);
-              // xEulerSub = visionTable.getIntegerArrayTopic("X Euler Angles").subscribe(new
-        // long[] {});
-        // yEulerSub = visionTable.getIntegerArrayTopic("Y Euler Angles").subscribe(new
-        // long[] {});
-        // // zEulerSub = visionTable.getIntegerArrayTopic("Z Euler
-        // Angles").subscribe(new long[] {});
+        bestXSub = visionTable.getIntegerTopic("Best Tag X").subscribe(-1);
+        bestYSub = visionTable.getIntegerTopic("Best Tag Y").subscribe(-1);
+        bestZSub = visionTable.getIntegerTopic("Best Tag Z").subscribe(-1);
+        hommographyR1Sub = visionTable.getIntegerArrayTopic("Homography R1").subscribe(new long[] {});
+        hommographyR2Sub = visionTable.getIntegerArrayTopic("Homography R2").subscribe(new long[] {});
+        hommographyR3Sub = visionTable.getIntegerArrayTopic("Homography R3").subscribe(new long[] {});
+        hammingSub = visionTable.getIntegerTopic("Best Ham").subscribe(-1);
+        timeStampSub = visionTable.getIntegerTopic("Best Timestamp").subscribe(-1);
+
     }
 
     public void putInfoOnDashboard() {
-        boolean tagVisible;
-        
+
         double ringCenterX[];
         double ringCenterY[];
         double[] xPoses;
         double[] yPoses;
         double[] zRots;
+        double[] homographiesX;
+        double[] homographiesY;
+        double[] homographiesZ;
 
-        if(tagIDSub.get().length != 0){
+        double homogTest = -1;
+
+        if (tagIDSub.get().length != 0) {
             yPoses = convertArray(yCoordsSub.get());
             xPoses = convertArray(xCoordsSub.get());
             zRots = convertArray(zRotsSub.get());
+            homographiesX = convertArray(hommographyR1Sub.get());
+            homographiesY = convertArray(hommographyR2Sub.get());
+            homographiesZ = convertArray(hommographyR3Sub.get());
+            homography = fuseHomographies(homographiesX, homographiesY);
+            timeStamp = (double)timeStampSub.get() * 100000;
+
+            // homogTest = (convertArray(hommographySub.get()))[0];
+            // homographies = fillMatrix(hommographySub.get(), homo );
+
             tagVisible = true;
         } else {
-            xPoses = new double[]{-.90}; 
-            yPoses = new double[]{-.67}; 
-            zRots = new double[]{.5}; 
+            xPoses = new double[] { -.90 };
+            yPoses = new double[] { -.67 };
+            zRots = new double[] { .5 };
             tagVisible = false;
         }
-        bestTagID = bestIDSub.get();
+        bestTagID = (int) bestIDSub.get();
+        bestTagX = bestXSub.get();
+        bestTagY = bestYSub.get();
+        bestTagZ = bestZSub.get();
+        hamming = hammingSub.get();
         SmartDashboard.putNumber("IDs", bestTagID);
-        if(xPoses.length != 0){
+
+        if (xPoses.length != 0) {
             xPose = xPoses[0];
             yPose = yPoses[0];
-            zRot = zRots[0];   
-        
+            zRot = zRots[0];
+
             // SmartDashboard.putNumberArray("IDs", convertArray(tagIDSub.get()));
             SmartDashboard.putNumber("X Coords", xPose);
             SmartDashboard.putNumber("Y Coords", yPose);
             SmartDashboard.putNumber("Z Rot", zRot);
             SmartDashboard.putBoolean("Tag in Sight", tagVisible);
             SmartDashboard.putNumber("Best Tag ID", bestTagID);
-            // SmartDashboard.putNumberArray("X Euler Angles",
-            // convertArray(xEulerSub.get()));
-            // SmartDashboard.putNumberArray("Y Euler Angles",
-            // convertArray(yEulerSub.get()));
-            // SmartDashboard.putNumberArray("Z Euler Angles",
-            // convertArray(zEulerSub.get()));
+            if (homogTest != -1) {
+                SmartDashboard.putNumber("Homography", homogTest);
+            }
         }
-        
-        if(ringCenterXSub.get().length != 0) {
+
+        if (ringCenterXSub.get().length != 0) {
             ringCenterX = convertArray(ringCenterXSub.get());
             ringCenterY = convertArray(ringCenterYSub.get());
+        } else {
+            ringCenterX = new double[] { -1 };
+            ringCenterY = new double[] { -1 };
         }
-        else {
-            ringCenterX = new double[]{-1};
-            ringCenterY = new double[]{-1};
-        }
-        
+
         ringX = ringCenterX[0];
         ringY = ringCenterY[0];
         SmartDashboard.putNumber("Ring X Coord", ringX);
         SmartDashboard.putNumber("Ring Y Coords", ringY);
-        
-        cam1Stream = cam1StreamSub.get();
-        if(cam1Stream != null)
-            SmartDashboard.putString("Cam1 Stream", cam1Stream);
-    }
-    
 
-    // need to convert each value to double individually, can't typecast entire array
+    }
+
+    public double[] fuseHomographies(double[] x, double[] y) {
+        double[] fused = new double[x.length + y.length];
+        for (int i = 0; i < x.length * 2; i++) {
+            fused[i] = i % 2 == 0 ? x[i] : y[i];
+        }
+
+        return fused;
+    }
+
+    // need to convert each value to double individually, can't typecast entire
+    // array
     private double[] convertArray(long[] arr) {
         double[] newArr = new double[arr.length];
 
@@ -121,13 +166,38 @@ public class VisionTablesListener {
         return newArr;
     }
 
+    // private double[][][] convertHomography(long[][][] hom) {
+    // for(int i = 0; i < hom.length; i++) {
+    // for(int j = 0; j < hom[i].length; j++) {
+    // hom[i][j] = convertArray(hom[i][j]);
+    // }
+    // }
+    // return hom;
+    // }
+
     public static VisionTablesListener getInstance() {
         if (instance == null)
             instance = new VisionTablesListener();
         return instance;
     }
 
-    public double getRot(){
+    public double[] getHomography(){
+        return homography != null ? homography : new double[9];
+    }
+
+    public boolean getTagVisible(){
+        return tagVisible;
+    }
+
+    public int getHamming(){
+        return (int)hamming;
+    }
+
+    public double getTimeStamp(){
+        return timeStamp;
+    }
+
+    public double getRot() {
         return zRot;
     }
 
@@ -135,7 +205,7 @@ public class VisionTablesListener {
         return yPose;
     }
 
-      public double getX() {
+    public double getX() {
         return xPose;
     }
 
@@ -147,7 +217,11 @@ public class VisionTablesListener {
         return ringY;
     }
 
-    public double getBestID() {
+    public int getBestID() {
         return bestTagID;
+    }
+
+    public Translation3d getBestPos() {
+        return new Translation3d(bestTagX, bestTagY, bestTagZ);
     }
 }

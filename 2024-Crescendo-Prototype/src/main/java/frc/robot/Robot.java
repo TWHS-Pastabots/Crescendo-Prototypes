@@ -4,25 +4,36 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+
 import frc.robot.commands.BreakBeamHandoff;
+import frc.robot.commands.HandoffCommand;
 import frc.robot.commands.ShootCommand;
 import frc.robot.subsystems.climber.Climber;
 import frc.robot.subsystems.intake.Intake;
+
 import frc.robot.subsystems.launcher.Launcher;
 import frc.robot.subsystems.launcher.Launcher.LauncherState;
 import edu.wpi.first.wpilibj.XboxController;
 import frc.robot.subsystems.swerve.Drivebase;
+import frc.robot.subsystems.vision.AutoAlign;
+import frc.robot.subsystems.vision.Cam1Align;
+import frc.robot.subsystems.vision.VisionTablesListener;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 
+import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -44,35 +55,44 @@ public class Robot extends TimedRobot {
   private Climber climber;
   private Intake intake;
   private Launcher launcher;
+  // private DigitalInputs digitalInputs;
+  private AutoAlign autoAlign;
+  // private LED litty;
+  private VisionTablesListener visTables;
+  private Cam1Align cam1;
+  private Translation3d bestTagPos;
+  private Translation3d currentPosTag;
 
   private static XboxController driver;
   private static XboxController operator;
 
   private Command m_autoSelected;
 
-  private BreakBeamHandoff handoff;
+  private BreakBeamHandoff handoffCommand;
   private ShootCommand shootCommand;
+  private HandoffCommand currentSpikeHandoff;
 
-  private SendableChooser<Command> m_chooser;
+  private boolean useCurrentSpike;
 
   @Override
   public void robotInit() {
     drivebase = Drivebase.getInstance();
     launcher = Launcher.getInstance();
     intake = Intake.getInstance();
-    // climber = Climber.getInstance();
+    climber = Climber.getInstance();
+    autoAlign = AutoAlign.getInstance();
+    visTables = VisionTablesListener.getInstance();
+    cam1 = Cam1Align.getInstance();
 
     driver = new XboxController(0);
     operator = new XboxController(1);
-    drivebase.resetOdometry(new Pose2d(0.0, 0.0, new Rotation2d(0)));
+    // drivebase.resetOdometry(new Pose2d(1, 1, new Rotation2d(0)));
 
-    m_chooser = AutoBuilder.buildAutoChooser();
-
-    SmartDashboard.putData("Auto choices", m_chooser);
-
+    handoffCommand = new BreakBeamHandoff();
     shootCommand = new ShootCommand();
-    handoff = new BreakBeamHandoff();
-  
+
+    currentSpikeHandoff = new HandoffCommand();
+
     // CameraServer.startAutomaticCapture(0);
   }
 
@@ -80,6 +100,8 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
     CommandScheduler.getInstance().run();
     drivebase.periodic();
+
+    visTables.putInfoOnDashboard();
 
     // launcher.launcherConnections();
     // intake.intakeConnections();
@@ -89,41 +111,55 @@ public class Robot extends TimedRobot {
     // intake.printConnections();
     // climber.printConnections();
 
+    SmartDashboard.putNumber("Gyro Angle:", drivebase.getHeading() + 90);
+    SmartDashboard.putNumber("X-coordinate", drivebase.getPose().getX());
+    SmartDashboard.putNumber("Y-coordinate", drivebase.getPose().getY());
+
+    SmartDashboard.putString("Alliance", DriverStation.getAlliance().toString());
+
     SmartDashboard.putNumber("Flipper Current", intake.getFlipperCurrent());
     SmartDashboard.putNumber("Pivot Current", launcher.getPivotCurrent());
     SmartDashboard.putNumber("Roller Current", intake.getRollerCurrent());
 
     SmartDashboard.putNumber("Flipper Position", intake.getFlipperPosition());
-    SmartDashboard.putNumber("Launcher Position1", launcher.getPosition()[0]);
-    SmartDashboard.putNumber("Launcher Position2", launcher.getPosition()[1]);
+    // SmartDashboard.putNumber("Launcher Position", launcher.getPosition());
 
-
-    SmartDashboard.putString("Intake State", intake.getIntakeState());
+    SmartDashboard.putString("Intake State", intake.getIntakeState().toString());
     SmartDashboard.putString("Launcher State", launcher.getLaunchState().toString());
-    SmartDashboard.putBoolean("Done? ", handoff.isFinished());
-    SmartDashboard.putBoolean("BreakBeam", launcher.getBreakBeam());
 
-    SmartDashboard.putNumber("X-Coordinate", drivebase.getPose().getX());
-    SmartDashboard.putNumber("Y-Coordinate", drivebase.getPose().getY());
-    SmartDashboard.putNumber("Op Right Stick", -operator.getRightY());
+    SmartDashboard.putBoolean("Launcher Breakbeam", launcher.getBreakBeam());
+    // SmartDashboard.putBoolean("Intake Breakbeam", intake.getBreakBeam());
 
+    // SmartDashboard.putBoolean("Shoot Done", autoSpeaker.isFinished());
+
+    // visTables.putInfoOnDashboard();
+
+    // SmartDashboard.putNumber("Frontleft Rotation",
+    // drivebase.getModuleRotations()[0]);
+    // SmartDashboard.putNumber("Frontright Rotation",
+    // drivebase.getModuleRotations()[1]);
+    // SmartDashboard.putNumber("Backleft Rotation",
+    // drivebase.getModuleRotations()[2]);
+    // SmartDashboard.putNumber("Backright Rotation",
+    // drivebase.getModuleRotations()[3]);
+
+    SmartDashboard.putNumber("Translational Velocity", drivebase.getTranslationalVelocity());
+    SmartDashboard.putNumber("Angular Velocity", drivebase.getTurnRate());
+
+    
+
+    // bestTagPos = cam1.getBestTagAbsPos();
+    // currentPosTag = visTables.getBestPos().plus(bestTagPos);
+    // SmartDashboard.putNumber("X Pos from Tag", currentPosTag.getX());
+    // SmartDashboard.putNumber("Y Pos from Tag", currentPosTag.getY());
   }
 
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-
-    // drivebase.resetPose(PathPlannerAuto.getStaringPoseFromAutoFile(m_chooser.getSelected().getName()));
-
-    if (m_autoSelected != null) {
-      m_autoSelected.schedule();
-    }
   }
 
   @Override
   public void autonomousPeriodic() {
-    intake.periodic();
-    launcher.updatePose();
   }
 
   @Override
@@ -135,84 +171,117 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    intake.periodic();
-    launcher.updatePose();
-
-    boolean fieldRelative = true;
+    // intake.updatePose();
 
     /* DRIVE CONTROLS */
+    double ySpeed;
+    double xSpeed;
+    double rot;
 
-    double ySpeed = driver.getLeftX();
-    double xSpeed = -driver.getLeftY();
-    double rot = driver.getRightX();
+    // ySpeed = -driver.getLeftX();
+    // xSpeed = driver.getLeftY();
+    // rot = -driver.getRightX();
+    ySpeed = drivebase.inputDeadband(-driver.getLeftX());
+    xSpeed = drivebase.inputDeadband(driver.getLeftY());
+    rot = drivebase.inputDeadband(-driver.getRightX());
 
-    if (driver.getYButton()) {
-      fieldRelative = !fieldRelative;
-    }
-    if (driver.getAButton()) {
+    if (driver.getXButton()) {
       drivebase.lockWheels();
     } else {
-      drivebase.drive(xSpeed, ySpeed, rot, fieldRelative);
+      drivebase.drive(xSpeed, ySpeed, rot, true);
     }
+
+    // if (driver.getYButton()) {
+    //   // launcher.setLauncherState(LauncherState.AMP);
+    //   launcher.setReverseLauncherOn();
+    //   launcher.setFlickerOn();
+    // } else{
+    //   launcher.setFlickOff();
+    //   launcher.setLauncherOff();
+    // }
 
     /* INTAKE CONTROLS */
 
-    // if (operator.getRightBumper()) {
-    //   handoff.schedule();
-    // }
+    if (operator.getRightBumper() && !useCurrentSpike) {
+      handoffCommand.schedule();
+    } else if (operator.getRightBumper()) {
+      currentSpikeHandoff.schedule();
+    }
 
-    // if(operator.getXButton()){
-    // intake.setFlipperPower();
-    // } else if(operator.getYButton()){
-    // intake.setReverseFlipperPower();
-    // } else {
-    // intake.setFlipperOff();
-    // }
+    if (operator.getYButton()) {
+      // intake.setIntakeState(IntakeState.GROUND);
+      // launcher.setLauncherState(LauncherState.LONG);
+      launcher.updatePose();
+    }
+
+    if (operator.getBButton()) {
+      intake.setReverseRollerPower();
+    }
+
+    if (operator.getLeftBumper()) {
+      // intake.setIntakeState(IntakeState.STOP);
+      // launcher.setLauncherState(LauncherState.HOVER);
+      launcher.updatePose();
+      launcher.setLauncherOff();
+      launcher.setFlickOff();
+
+    }
 
     // *CLIMBER CONTROLS */
 
-    // if (driver.getRightBumper()) {
-    //   climber.setClimbingPower();
-    // } else if (driver.getLeftBumper()) {
-    //   climber.setReverseClimberPower();
-    // } else {
-    //   climber.setClimberOff();
-    // }
+    if (driver.getRightBumper()) {
+      climber.setClimbingPower();
+    } else if (driver.getLeftBumper()) {
+      climber.setReverseClimberPower();
+    } else {
+      climber.setClimberOff();
+    }
 
     /* LAUNCHER CONTROLS */
 
-    // if (operator.getRightY() > 0.1) {
+    // if (-operator.getRightY() > 0) {
     // launcher.setPivotPower();
-    // } else if (operator.getRightY() < -0.1) {
+    // } else if (-operator.getRightY() < 0) {
     // launcher.setReversePivotPower();
     // } else {
     // launcher.setPivotOff();
     // }
 
-    if (operator.getRightTriggerAxis() > 0) {
-      launcher.setLauncherOn();
-    }else if(operator.getRightBumper()){
-      launcher.setFlickerOn();
-    } else if (operator.getLeftTriggerAxis() > 0) {
-      launcher.setReverseLauncherOn();
+    // if (operator.getPOV() == 0) {
+    //   launcher.setLauncherState(LauncherState.SPEAKER);
+    // }
+    // if (operator.getPOV() == 90) {
+    //   launcher.setLauncherState(LauncherState.AMP);
+    // }
+    // if (operator.getPOV() == 180) {
+    //   launcher.setLauncherState(LauncherState.TRAP);
+    // }
+    // if (operator.getPOV() == 270) {
+    //   launcher.setLauncherState(LauncherState.LONG);
+    // }
+
+    if (operator.getXButton()) {
+      intake.setReverseRollerPower();
       launcher.setFlickerReverse();
-    } else {
+
+      launcher.setReverseLauncherOn();
+    }
+
+    if (operator.getRightTriggerAxis() > 0) {
+      shootCommand.initialize();
+      shootCommand.schedule();
+    } else if (operator.getLeftTriggerAxis() > 0) {
       launcher.setLauncherOff();
       launcher.setFlickOff();
-    }
-
-    if(operator.getAButton()){
-      intake.setRollerPower();
-    }
-    else{
       intake.setRollerOff();
+      shootCommand.cancel();
+      handoffCommand.cancel();
+      // litty.setBlue();
     }
 
-    // if (operator.getAButton()) {
-    //   launcher.setPivotState(LauncherState.HANDOFF);
-    // } else if (operator.getBButton()) {
-    //   launcher.setPivotState(LauncherState.SPEAKER);
-    // }
+    
+   
+
   }
 
   @Override
